@@ -87,3 +87,5 @@ Here are some real examples you might create:
 ---
 
 _"Making decisions together, one poll at a time."_ 🗳️
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">Building QuickPoll: Create polls in 30 seconds ⚡<br><br>✨ Real-time results<br>✨ Minimal design<br>✨ No signups for voters<br>✨ Share anywhere<br><br>Perfect for &quot;Where should we eat?&quot; moments 🍕<a href="https://twitter.com/hashtag/BuildInPublic?src=hash&amp;ref_src=twsrc%5Etfw">#BuildInPublic</a> <a href="https://twitter.com/hashtag/WebDev?src=hash&amp;ref_src=twsrc%5Etfw">#WebDev</a> <a href="https://twitter.com/hashtag/NextJS?src=hash&amp;ref_src=twsrc%5Etfw">#NextJS</a><a href="https://twitter.com/ClerkDev?ref_src=twsrc%5Etfw">@ClerkDev</a> <a href="https://twitter.com/piyushgarg_dev?ref_src=twsrc%5Etfw">@piyushgarg_dev</a> <a href="https://t.co/oOzVyqNX0C">https://t.co/oOzVyqNX0C</a></p>&mdash; Manish (@manishdsharma08) <a href="https://twitter.com/manishdsharma08/status/1936905865308917811?ref_src=twsrc%5Etfw">June 22, 2025</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
