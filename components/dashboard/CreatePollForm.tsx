@@ -2,11 +2,8 @@
 
 import React, { useState } from 'react';
 import { Plus, X, ArrowLeft } from 'lucide-react';
+import { CreatePollFormProps } from '@/types';
 
-interface CreatePollFormProps {
-  onCreatePoll: (pollData: { question: string; options: string[] }) => void;
-  onCancel: () => void;
-}
 
 export default function CreatePollForm({ onCreatePoll, onCancel }: CreatePollFormProps) {
   const [question, setQuestion] = useState('');

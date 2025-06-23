@@ -2,12 +2,9 @@
 
 import React from 'react';
 import { Eye, BarChart3, Users, Calendar, ExternalLink, MoreVertical } from 'lucide-react';
-import { Poll } from '@/app/dashboard/page';
+import { Poll, PollsListProps } from '@/types';
 
-interface PollsListProps {
-  polls: Poll[];
-  onPreviewPoll: (poll: Poll) => void;
-}
+
 
 export default function PollsList({ polls, onPreviewPoll }: PollsListProps) {
   const formatDate = (date: Date) => {

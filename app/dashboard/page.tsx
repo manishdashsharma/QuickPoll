@@ -7,22 +7,9 @@ import { Plus, BarChart3, Users, Eye } from 'lucide-react';
 import CreatePollForm from '@/components/dashboard/CreatePollForm';
 import PollPreview from '@/components/dashboard/PollPreview';
 import PollsList from '@/components/dashboard/PollsList';
+import { Poll } from '@/types';
 
-export interface PollOption {
-  id: string;
-  text: string;
-  votes: number;
-}
 
-export interface Poll {
-  id: string;
-  question: string;
-  options: PollOption[];
-  totalVotes: number;
-  isActive: boolean;
-  createdAt: Date;
-  slug: string;
-}
 
 export default function Dashboard() {
   const { user } = useUser();

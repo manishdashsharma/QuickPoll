@@ -2,13 +2,9 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft, Share2, Copy, ExternalLink, Eye, BarChart3 } from 'lucide-react';
-import { Poll } from '@/app/dashboard/page';
+import { PollPreviewProps } from '@/types';
 
 
-interface PollPreviewProps {
-  poll: Poll;
-  onBack: () => void;
-}
 
 export default function PollPreview({ poll, onBack }: PollPreviewProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
