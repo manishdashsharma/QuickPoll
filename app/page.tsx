@@ -1,15 +1,33 @@
 /* eslint-disable react/no-unescaped-entities */
+
+'use client';
+
 import React from 'react';
 import { BarChart3, Users, Zap, Share2, Lock, TrendingUp, ArrowRight } from 'lucide-react';
+import { SignInButton, useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import FeatureCard from '@/components/FeatureCard';
 import StepCard from '@/components/SetpCard';
 
+export default function Homepage() {
+  const { isSignedIn } = useUser();
+  const router = useRouter();
 
+  useEffect(() => {
+    if (isSignedIn) {
+      router.push('/dashboard');
+    }
+  }, [isSignedIn, router]);
 
+  const handleCreatePollClick = () => {
+    if (isSignedIn) {
+      router.push('/dashboard');
+    }
+    
+  };
 
-
-export default function QuickPollHomepage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <Navbar />
@@ -26,17 +44,29 @@ export default function QuickPollHomepage() {
             The fastest way to create, share, and analyze polls. Get instant feedback from your audience with real-time results.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors flex items-center gap-2 justify-center">
-              Create Your First Poll
-              <ArrowRight className="w-5 h-5" />
-            </button>
+            {isSignedIn ? (
+              <button 
+                onClick={handleCreatePollClick}
+                className="bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors flex items-center gap-2 justify-center"
+              >
+                Go to Dashboard
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            ) : (
+              <SignInButton mode="modal"
+              >
+                <button className="bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors flex items-center gap-2 justify-center">
+                  Create Your First Poll
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </SignInButton>
+            )}
             <button className="border border-gray-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:border-gray-500 hover:bg-gray-900/50 transition-colors">
               See Demo
             </button>
           </div>
         </div>
 
-        {/* Demo Preview */}
         <div className="relative max-w-4xl mx-auto">
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
             <div className="flex items-center gap-3 mb-8">
@@ -45,7 +75,7 @@ export default function QuickPollHomepage() {
                 <div className="w-3 h-3 bg-gray-600 rounded-full"></div>
                 <div className="w-3 h-3 bg-gray-600 rounded-full"></div>
               </div>
-              <div className="text-sm text-gray-500 font-mono">quickpoll.com/team-lunch</div>
+              <div className="text-sm text-gray-500 font-mono">{process.env.NEXT_PUBLIC_URL}/team-lunch</div>
             </div>
             <h3 className="text-2xl font-bold text-white mb-8">What should we order for the team lunch?</h3>
             <div className="space-y-4">
@@ -79,7 +109,6 @@ export default function QuickPollHomepage() {
         </div>
       </section>
 
-      {/* Features Section */}
       <section id="features" className="max-w-7xl mx-auto px-6 py-20">
         <div className="text-center mb-20">
           <h2 className="text-4xl md:text-6xl font-bold text-white mb-8">
@@ -156,7 +185,6 @@ export default function QuickPollHomepage() {
         </div>
       </section>
 
-      {/* Stats Section */}
       <section className="border-t border-gray-800 py-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-8 text-center">
@@ -180,7 +208,6 @@ export default function QuickPollHomepage() {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="max-w-7xl mx-auto px-6 py-20">
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-16 text-center">
           <h2 className="text-4xl md:text-6xl font-bold text-white mb-8">
@@ -189,13 +216,24 @@ export default function QuickPollHomepage() {
           <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed">
             Join thousands of teams and individuals who use QuickPoll for better decision-making.
           </p>
-          <button className="bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors">
-            Create Your First Poll - It's Free
-          </button>
+          {isSignedIn ? (
+            <button 
+              onClick={handleCreatePollClick}
+              className="bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors"
+            >
+              Go to Dashboard
+            </button>
+          ) : (
+            <SignInButton mode="modal"
+            >
+              <button className="bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors">
+                Create Your First Poll - It's Free
+              </button>
+            </SignInButton>
+          )}
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="border-t border-gray-800 py-16">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-center gap-3 mb-8">
