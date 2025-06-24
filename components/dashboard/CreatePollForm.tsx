@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, X, ArrowLeft } from 'lucide-react';
-import { CreatePollFormProps } from '@/types';
-
+import { Plus, X, ArrowLeft, Loader2 } from 'lucide-react';
+import { CreatePollFormProps, CreatePollFormData } from '@/types';
 
 export default function CreatePollForm({ onCreatePoll, onCancel }: CreatePollFormProps) {
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState(['', '']);
-  const [errors, setErrors] = useState<{ question?: string; options?: string }>({});
+  const [errors, setErrors] = useState<{ question?: string; options?: string; api?: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const addOption = () => {
     if (options.length < 6) {
@@ -26,10 +26,14 @@ export default function CreatePollForm({ onCreatePoll, onCancel }: CreatePollFor
     const newOptions = [...options];
     newOptions[index] = value;
     setOptions(newOptions);
+    // Clear API errors when user makes changes
+    if (errors.api) {
+      setErrors(prev => ({ ...prev, api: undefined }));
+    }
   };
 
   const validateForm = () => {
-    const newErrors: { question?: string; options?: string } = {};
+    const newErrors: { question?: string; options?: string; api?: string } = {};
 
     if (!question.trim()) {
       newErrors.question = 'Question is required';
@@ -44,15 +48,44 @@ export default function CreatePollForm({ onCreatePoll, onCancel }: CreatePollFor
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (validateForm()) {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrors({}); 
+
+    try {
       const validOptions = options.filter(option => option.trim());
-      onCreatePoll({
+      const pollData: CreatePollFormData = {
         question: question.trim(),
         options: validOptions
-      });
+      };
+
+      // Let the parent component handle the API call
+      await onCreatePoll(pollData);
+      
+      // The parent component should handle the redirect
+      
+    } catch (error) {
+      console.error('Failed to create poll:', error);
+      setErrors(prev => ({
+        ...prev,
+        api: error instanceof Error ? error.message : 'Failed to create poll. Please try again.'
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleQuestionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuestion(e.target.value);
+    // Clear errors when user makes changes
+    if (errors.question || errors.api) {
+      setErrors(prev => ({ ...prev, question: undefined, api: undefined }));
     }
   };
 
@@ -61,7 +94,8 @@ export default function CreatePollForm({ onCreatePoll, onCancel }: CreatePollFor
       <div className="mb-8">
         <button
           onClick={onCancel}
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4"
+          disabled={isSubmitting}
+          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
@@ -76,6 +110,13 @@ export default function CreatePollForm({ onCreatePoll, onCancel }: CreatePollFor
 
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
         <form onSubmit={handleSubmit} className="space-y-8">
+          {/* API Error Message */}
+          {errors.api && (
+            <div className="bg-red-600/20 border border-red-600/50 rounded-lg p-4">
+              <p className="text-red-400 text-sm">{errors.api}</p>
+            </div>
+          )}
+
           {/* Question Input */}
           <div>
             <label htmlFor="question" className="block text-lg font-semibold text-white mb-4">
@@ -85,9 +126,10 @@ export default function CreatePollForm({ onCreatePoll, onCancel }: CreatePollFor
               type="text"
               id="question"
               value={question}
-              onChange={(e) => setQuestion(e.target.value)}
+              onChange={handleQuestionChange}
+              disabled={isSubmitting}
               placeholder="What would you like to ask?"
-              className="w-full px-4 py-4 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:border-white focus:outline-none transition-colors text-lg"
+              className="w-full px-4 py-4 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:border-white focus:outline-none transition-colors text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             />
             {errors.question && (
               <p className="text-red-400 text-sm mt-2">{errors.question}</p>
@@ -107,15 +149,17 @@ export default function CreatePollForm({ onCreatePoll, onCancel }: CreatePollFor
                       type="text"
                       value={option}
                       onChange={(e) => updateOption(index, e.target.value)}
+                      disabled={isSubmitting}
                       placeholder={`Option ${index + 1}`}
-                      className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:border-white focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:border-white focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
                   {options.length > 2 && (
                     <button
                       type="button"
                       onClick={() => removeOption(index)}
-                      className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                      disabled={isSubmitting}
+                      className="p-2 text-gray-400 hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -128,7 +172,8 @@ export default function CreatePollForm({ onCreatePoll, onCancel }: CreatePollFor
               <button
                 type="button"
                 onClick={addOption}
-                className="mt-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                disabled={isSubmitting}
+                className="mt-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="w-4 h-4" />
                 Add Option
@@ -188,15 +233,24 @@ export default function CreatePollForm({ onCreatePoll, onCancel }: CreatePollFor
             <button
               type="button"
               onClick={onCancel}
-              className="px-8 py-3 border border-gray-600 text-white rounded-lg font-semibold hover:border-gray-500 hover:bg-gray-900/50 transition-colors"
+              disabled={isSubmitting}
+              className="px-8 py-3 border border-gray-600 text-white rounded-lg font-semibold hover:border-gray-500 hover:bg-gray-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-8 py-3 bg-white text-black rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+              disabled={isSubmitting}
+              className="px-8 py-3 bg-white text-black rounded-lg font-semibold hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 justify-center"
             >
-              Create Poll
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Creating Poll...
+                </>
+              ) : (
+                'Create Poll'
+              )}
             </button>
           </div>
         </form>

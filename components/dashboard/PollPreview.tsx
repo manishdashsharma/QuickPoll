@@ -1,25 +1,122 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
-import React, { useState } from 'react';
-import { ArrowLeft, Share2, Copy, ExternalLink, Eye, BarChart3 } from 'lucide-react';
-import { PollPreviewProps } from '@/types';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Share2, Copy, ExternalLink, Eye, BarChart3, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Poll, VoteResponse, GetPollResponse, IPollOption } from '@/types';
 
+interface PollPreviewProps {
+  poll: Poll;
+  onBack: () => void;
+  onPollUpdate?: (poll: Poll) => void;
+}
 
-
-export default function PollPreview({ poll, onBack }: PollPreviewProps) {
+export default function PollPreview({ poll: initialPoll, onBack, onPollUpdate }: PollPreviewProps) {
+  const [poll, setPoll] = useState<Poll>(initialPoll);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [voting, setVoting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const pollUrl = `${process.env.NEXT_PUBLIC_URL}/${poll.slug}`;
+  const pollUrl = poll.url || `${process.env.NEXT_PUBLIC_URL}/${poll.slug}`;
 
+  const fetchPollData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/polls/${poll.slug}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch poll data');
+      }
 
-  const handleVote = (optionId: string) => {
-    if (!hasVoted) {
-      setSelectedOption(optionId);
-      setHasVoted(true);
-      // In a real app, you would send this vote to your backend
+      const data: GetPollResponse = await response.json();
+      
+      if (data.success && data.poll) {
+        const updatedPoll: Poll = {
+          id: data.poll.id,
+          question: data.poll.question,
+          options: (data.poll.options || []).map((option: IPollOption, index: number) => ({
+            id: option._id?.toString() || `option-${index}`,
+            text: option.text,
+            votes: option.votes || 0
+          })),
+          totalVotes: data.poll.totalVotes || 0,
+          isActive: data.poll.isActive,
+          createdAt: new Date(data.poll.createdAt),
+          slug: data.poll.slug,
+          url: pollUrl,
+          hasUserVoted: data.poll.hasUserVoted
+        };
+
+        setPoll(updatedPoll);
+        setHasVoted(data.poll.hasUserVoted || false);
+        
+        if (onPollUpdate) {
+          onPollUpdate(updatedPoll);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching poll data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load poll data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPollData();
+  }, [poll.slug]);
+
+  const handleVote = async (optionId: string) => {
+    if (hasVoted || voting) return;
+
+    try {
+      setVoting(true);
+      setError(null);
+      
+      const response = await fetch(`/api/polls/${poll.slug}/vote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ optionId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to cast vote');
+      }
+
+      const data: VoteResponse = await response.json();
+
+      if (data.success && data.poll) {
+        const updatedPoll: Poll = {
+          ...poll,
+          options: (data.poll.options || []).map((option: IPollOption, index: number) => ({
+            id: option._id?.toString() || `option-${index}`,
+            text: option.text,
+            votes: option.votes || 0
+          })),
+          totalVotes: data.poll.totalVotes || 0,
+          hasUserVoted: true
+        };
+
+        setPoll(updatedPoll);
+        setSelectedOption(optionId);
+        setHasVoted(true);
+
+        if (onPollUpdate) {
+          onPollUpdate(updatedPoll);
+        }
+      }
+    } catch (err) {
+      console.error('Error voting:', err);
+      setError(err instanceof Error ? err.message : 'Failed to cast vote');
+    } finally {
+      setVoting(false);
     }
   };
 
@@ -29,7 +126,35 @@ export default function PollPreview({ poll, onBack }: PollPreviewProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy link',err);
+      console.error('Failed to copy link', err);
+    }
+  };
+
+  const handleTogglePollStatus = async () => {
+    try {
+      const response = await fetch(`/api/polls/${poll.slug}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isActive: !poll.isActive }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update poll status');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        const updatedPoll = { ...poll, isActive: !poll.isActive };
+        setPoll(updatedPoll);
+        if (onPollUpdate) {
+          onPollUpdate(updatedPoll);
+        }
+      }
+    } catch (err) {
+      console.error('Error updating poll status:', err);
+      setError('Failed to update poll status');
     }
   };
 
@@ -63,6 +188,13 @@ export default function PollPreview({ poll, onBack }: PollPreviewProps) {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={fetchPollData}
+              disabled={loading}
+              className="bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-700 transition-colors flex items-center gap-2"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Refresh'}
+            </button>
             <div className="relative">
               <button
                 onClick={() => setShowShareMenu(!showShareMenu)}
@@ -92,7 +224,7 @@ export default function PollPreview({ poll, onBack }: PollPreviewProps) {
                       </button>
                     </div>
                     {copied && (
-                      <div className="text-green-400 text-sm">Link copied!</div>
+                      <div className="text-green-400 text-sm mb-3">Link copied!</div>
                     )}
                     <button
                       onClick={() => window.open(pollUrl, '_blank')}
@@ -108,6 +240,15 @@ export default function PollPreview({ poll, onBack }: PollPreviewProps) {
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-600/20 border border-red-600/50 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-red-400" />
+            <p className="text-red-400">{error}</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-3 gap-6 mb-8">
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 text-center">
@@ -152,16 +293,23 @@ export default function PollPreview({ poll, onBack }: PollPreviewProps) {
             <button
               key={option.id}
               onClick={() => handleVote(option.id)}
-              disabled={hasVoted}
+              disabled={hasVoted || voting || !poll.isActive}
               className={`w-full flex items-center justify-between p-4 border rounded-lg transition-colors ${
                 hasVoted
                   ? selectedOption === option.id
                     ? 'bg-blue-600/20 border-blue-500'
                     : 'bg-gray-800 border-gray-700'
-                  : 'bg-gray-800 border-gray-700 hover:border-gray-600 hover:bg-gray-750'
-              } ${hasVoted ? 'cursor-default' : 'cursor-pointer'}`}
+                  : poll.isActive
+                  ? 'bg-gray-800 border-gray-700 hover:border-gray-600 hover:bg-gray-750'
+                  : 'bg-gray-800 border-gray-700 opacity-50'
+              } ${hasVoted || !poll.isActive ? 'cursor-default' : 'cursor-pointer'}`}
             >
-              <span className="font-medium text-white">{option.text}</span>
+              <span className="font-medium text-white flex items-center gap-2">
+                {voting && selectedOption === option.id && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                {option.text}
+              </span>
               <div className="flex items-center gap-4">
                 <div className="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
                   <div 
@@ -179,17 +327,28 @@ export default function PollPreview({ poll, onBack }: PollPreviewProps) {
           ))}
         </div>
 
-        {!hasVoted && (
+        {!hasVoted && poll.isActive && (
           <div className="text-center mb-8">
             <p className="text-gray-400">Click on an option to cast your vote</p>
           </div>
         )}
 
+        {!poll.isActive && (
+          <div className="bg-orange-600/20 border border-orange-600/50 rounded-lg p-4 mb-8">
+            <p className="text-orange-400 text-center font-semibold">
+              This poll is currently closed
+            </p>
+          </div>
+        )}
+
         {hasVoted && (
           <div className="bg-green-600/20 border border-green-600/50 rounded-lg p-4 mb-8">
-            <p className="text-green-400 text-center font-semibold">
-              Thanks for voting! Your response has been recorded.
-            </p>
+            <div className="flex items-center justify-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <p className="text-green-400 font-semibold">
+                Thanks for voting! Your response has been recorded.
+              </p>
+            </div>
           </div>
         )}
 
@@ -205,14 +364,25 @@ export default function PollPreview({ poll, onBack }: PollPreviewProps) {
       <div className="mt-8 bg-gray-900 border border-gray-800 rounded-xl p-6">
         <h4 className="text-lg font-semibold text-white mb-4">Poll Management</h4>
         <div className="flex flex-col sm:flex-row gap-4">
-          <button className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
-            View Analytics
+          <button 
+            onClick={fetchPollData}
+            disabled={loading}
+            className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Refresh Data'}
           </button>
-          <button className="flex-1 border border-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:border-gray-500 hover:bg-gray-800 transition-colors">
-            Edit Poll
+          <button 
+            onClick={handleTogglePollStatus}
+            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-colors ${
+              poll.isActive 
+                ? 'border border-orange-600 text-orange-400 hover:bg-orange-600/10'
+                : 'border border-green-600 text-green-400 hover:bg-green-600/10'
+            }`}
+          >
+            {poll.isActive ? 'Close Poll' : 'Reopen Poll'}
           </button>
           <button className="flex-1 border border-red-600 text-red-400 px-6 py-3 rounded-lg font-semibold hover:bg-red-600/10 transition-colors">
-            Close Poll
+            Delete Poll
           </button>
         </div>
       </div>

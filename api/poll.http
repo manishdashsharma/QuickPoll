@@ -1,0 +1,215 @@
+### Variables
+@baseUrl = http://localhost:3000
+@authToken = eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQSIsImtpZCI6Imluc18yeXNZUVV2QjZzbTVYdElNMWpkQlVVcWw2algiLCJ0eXAiOiJKV1QifQ.eyJhenAiOiJodHRwOi8vbG9jYWxob3N0OjMwMDAiLCJleHAiOjE3NTA3NTAzODIsImZ2YSI6WzEzODgsLTFdLCJpYXQiOjE3NTA3NTAzMjIsImlzcyI6Imh0dHBzOi8vZnJlZS1iZWRidWctMC5jbGVyay5hY2NvdW50cy5kZXYiLCJuYmYiOjE3NTA3NTAzMTIsInNpZCI6InNlc3NfMnl0dzZYdHFRVmZkVmpMemFJRExQZWFqZk9jIiwic3ViIjoidXNlcl8yeXNkMzZUV1RLYkw3eWg1bm8wbU9rd25PUUUiLCJ2IjoyfQ.C6H60FsTILy7d1BOTddS6DhgbmHYaSOs4H8XKBI-qWW1rUuoDK-19RvqtI1sr45LBnoKENe77RFFHOJOmYe8FSX1829huJovFEiJxyLm3gM_VtR_4vJvlJWOC5HZ6StBzN6yx035ySpGc0D8HxWM5AzfRbbDTaYBl5OKAGGBB_0RXPCKNwuiZwIHJ9XaUnm7hlA0vjfdU46tNZV7_vbx70mNmwC5c-3TrpCuJ0miKMPKA84G5owpv_G-HNJI5zZ8JG_pnHeXA0RU8nuv0bvrAZy0V5YMu8AZ_coLv70BxgrdEFIgeOLDQGsVT6D9uih7zZoB6bPVYrc3lz1J4H7UbQ
+
+
+### Create a new poll
+POST {{baseUrl}}/api/polls
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "question": "What's your favorite programming language?",
+  "options": [
+    "JavaScript",
+    "TypeScript",
+    "Python",
+    "Go"
+  ]
+}
+
+###
+
+### Get all polls for authenticated user
+GET {{baseUrl}}/api/polls
+Authorization: Bearer {{authToken}}
+
+###
+
+### Get all polls with pagination
+GET {{baseUrl}}/api/polls?page=1&limit=5
+Authorization: Bearer {{authToken}}
+
+###
+
+### Get specific poll by slug (public endpoint)
+GET {{baseUrl}}/api/polls/what-s-your-favorite-programming-language-1750746722288
+
+###
+
+### Vote on a poll (public endpoint)
+POST {{baseUrl}}/api/polls/what-s-your-favorite-programming-language-1750746722288/vote
+Content-Type: application/json
+
+{
+  "optionId": "685a4662af9d2470ff510db7"
+}
+
+###
+
+### Vote on a poll (authenticated user)
+POST {{baseUrl}}/api/polls/whats-your-favorite-programming-language-1704067200000/vote
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "optionId": "option_id_here"
+}
+
+###
+
+### Update poll status (close/activate poll)
+PUT {{baseUrl}}/api/polls/whats-your-favorite-programming-language-1704067200000
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "isActive": false
+}
+
+###
+
+### Delete a poll
+DELETE {{baseUrl}}/api/polls/whats-your-favorite-programming-language-1704067200000
+Authorization: Bearer {{authToken}}
+
+###
+
+### Create poll with validation errors (question too long)
+POST {{baseUrl}}/api/polls
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "question": "This is a very long question that exceeds the maximum character limit of 500 characters. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.",
+  "options": ["Option 1", "Option 2"]
+}
+
+###
+
+### Create poll with validation errors (too few options)
+POST {{baseUrl}}/api/polls
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "question": "Test question?",
+  "options": ["Only one option"]
+}
+
+###
+
+### Create poll with validation errors (too many options)
+POST {{baseUrl}}/api/polls
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "question": "Test question?",
+  "options": [
+    "Option 1",
+    "Option 2", 
+    "Option 3",
+    "Option 4",
+    "Option 5",
+    "Option 6",
+    "Option 7"
+  ]
+}
+
+###
+
+### Test unauthorized request
+POST {{baseUrl}}/api/polls
+Content-Type: application/json
+
+{
+  "question": "This should fail without auth",
+  "options": ["Option 1", "Option 2"]
+}
+
+###
+
+### Test voting on non-existent poll
+POST {{baseUrl}}/api/polls/non-existent-poll-slug/vote
+Content-Type: application/json
+
+{
+  "optionId": "some_option_id"
+}
+
+###
+
+### Test voting with invalid option ID
+POST {{baseUrl}}/api/polls/whats-your-favorite-programming-language-1704067200000/vote
+Content-Type: application/json
+
+{
+  "optionId": "invalid_option_id"
+}
+
+###
+
+### Test voting without option ID
+POST {{baseUrl}}/api/polls/whats-your-favorite-programming-language-1704067200000/vote
+Content-Type: application/json
+
+{
+  "invalidField": "value"
+}
+
+###
+
+### Test getting non-existent poll
+GET {{baseUrl}}/api/polls/non-existent-poll-slug
+
+###
+
+### Test updating poll that doesn't belong to user
+PUT {{baseUrl}}/api/polls/someone-elses-poll-slug
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "isActive": false
+}
+
+###
+
+### Test deleting poll that doesn't belong to user  
+DELETE {{baseUrl}}/api/polls/someone-elses-poll-slug
+Authorization: Bearer {{authToken}}
+
+###
+
+### Create poll for team lunch (example from your UI)
+POST {{baseUrl}}/api/polls
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "question": "What should we order for the team lunch?",
+  "options": [
+    "🍕 Pizza",
+    "🌮 Tacos",
+    "🍔 Burgers",
+    "🥗 Salads"
+  ]
+}
+
+###
+
+### Create poll for framework choice (example from your UI)
+POST {{baseUrl}}/api/polls
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "question": "Which framework should we use for the next project?",
+  "options": [
+    "Next.js",
+    "React",
+    "Vue.js",
+    "Angular"
+  ]
+}

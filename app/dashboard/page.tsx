@@ -1,66 +1,117 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Navbar from "@/components/Navbar";
-import { Plus, BarChart3, Users, Eye } from 'lucide-react';
+import { Plus, BarChart3, Users, Eye, Loader2 } from 'lucide-react';
 import CreatePollForm from '@/components/dashboard/CreatePollForm';
 import PollPreview from '@/components/dashboard/PollPreview';
 import PollsList from '@/components/dashboard/PollsList';
-import { Poll } from '@/types';
-
-
+import { Poll, CreatePollFormData, GetPollsResponse, CreatePollResponse, ApiPollData, IPollOption } from '@/types';
 
 export default function Dashboard() {
   const { user } = useUser();
   const [currentView, setCurrentView] = useState<'overview' | 'create' | 'preview'>('overview');
   const [currentPoll, setCurrentPoll] = useState<Poll | null>(null);
-  const [polls, setPolls] = useState<Poll[]>([
-    {
-      id: '1',
-      question: 'What should we order for the team lunch?',
-      options: [
-        { id: '1', text: '🍕 Pizza', votes: 15 },
-        { id: '2', text: '🌮 Tacos', votes: 9 }
-      ],
-      totalVotes: 24,
-      isActive: true,
-      createdAt: new Date('2024-01-15'),
-      slug: 'team-lunch'
-    },
-    {
-      id: '2',
-      question: 'Which framework should we use for the next project?',
-      options: [
-        { id: '1', text: 'Next.js', votes: 12 },
-        { id: '2', text: 'React', votes: 8 },
-        { id: '3', text: 'Vue.js', votes: 5 }
-      ],
-      totalVotes: 25,
-      isActive: true,
-      createdAt: new Date('2024-01-14'),
-      slug: 'framework-choice'
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPolls = async () => {
+    try {
+      setLoading(true);
+      setError(null); // Clear any previous errors
+      const response = await fetch('/api/polls?page=1&limit=50');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch polls');
+      }
+
+      const data: GetPollsResponse = await response.json();
+      
+      if (data.success) {
+        const transformedPolls: Poll[] = data.polls.map((poll: ApiPollData) => ({
+          id: poll.id,
+          question: poll.question,
+          options: poll.options.map((option: IPollOption, index: number) => ({
+            id: option._id?.toString() || (index + 1).toString(),
+            text: option.text,
+            votes: option.votes || 0
+          })),
+          totalVotes: poll.totalVotes || 0,
+          isActive: poll.isActive,
+          createdAt: new Date(poll.createdAt),
+          slug: poll.slug,
+          url: poll.url
+        }));
+        
+        setPolls(transformedPolls);
+      }
+    } catch (err) {
+      console.error('Error fetching polls:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load polls');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
-  const handleCreatePoll = (pollData: { question: string; options: string[] }) => {
-    const newPoll: Poll = {
-      id: Date.now().toString(),
-      question: pollData.question,
-      options: pollData.options.map((option, index) => ({
-        id: (index + 1).toString(),
-        text: option,
-        votes: 0
-      })),
-      totalVotes: 0,
-      isActive: true,
-      createdAt: new Date(),
-      slug: pollData.question.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50)
-    };
+  useEffect(() => {
+    fetchPolls();
+  }, []);
 
-    setPolls([newPoll, ...polls]);
-    setCurrentPoll(newPoll);
-    setCurrentView('preview');
+  const handleCreatePoll = async (pollData: CreatePollFormData) => {
+    try {
+      const response = await fetch('/api/polls', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: pollData.question,
+          options: pollData.options
+        }),
+      });
+
+      const data: CreatePollResponse = await response.json();
+
+      if (!response.ok) {
+        throw new Error( `Failed to create poll: ${response.status}`);
+      }
+
+      if (data.success && data.poll) {
+        const newPoll: Poll = {
+          id: data.poll.id,
+          question: data.poll.question,
+          options: data.poll.options.map((option: IPollOption, index: number) => ({
+            id: option._id?.toString() || (index + 1).toString(),
+            text: option.text,
+            votes: option.votes || 0
+          })),
+          totalVotes: data.poll.totalVotes || 0,
+          isActive: data.poll.isActive,
+          createdAt: new Date(data.poll.createdAt),
+          slug: data.poll.slug,
+          url: data.poll.url
+        };
+
+        // Add the new poll to the list
+        setPolls(prev => [newPoll, ...prev]);
+        
+        // Set current poll and go to preview
+        setCurrentPoll(newPoll);
+        setCurrentView('preview');
+        
+        // Clear any errors
+        setError(null);
+        
+        console.log('Poll created successfully:', newPoll);
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (error) {
+      console.error('Error creating poll:', error);
+      throw error; // Re-throw so the form component can handle it
+    }
   };
 
   const handlePreviewPoll = (poll: Poll) => {
@@ -68,28 +119,71 @@ export default function Dashboard() {
     setCurrentView('preview');
   };
 
+  const handleBackToOverview = () => {
+    setCurrentView('overview');
+    setCurrentPoll(null);
+    setError(null); // Clear any errors when going back
+  };
+
   const renderContent = () => {
+    if (loading && currentView === 'overview') {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-white mx-auto mb-4" />
+            <p className="text-gray-300">Loading your polls...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (error && currentView === 'overview') {
+      return (
+        <div className="text-center">
+          <div className="bg-red-600/20 border border-red-600/50 rounded-lg p-6 max-w-md mx-auto">
+            <p className="text-red-400 mb-4">{error}</p>
+            <button
+              onClick={() => {
+                setError(null);
+                fetchPolls();
+              }}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     switch (currentView) {
       case 'create':
         return (
           <CreatePollForm
             onCreatePoll={handleCreatePoll}
-            onCancel={() => setCurrentView('overview')}
+            onCancel={handleBackToOverview}
           />
         );
       case 'preview':
         return currentPoll ? (
           <PollPreview
             poll={currentPoll}
-            onBack={() => setCurrentView('overview')}
+            onBack={handleBackToOverview}
           />
         ) : (
-          <div>No poll selected</div>
+          <div className="text-center text-gray-400">
+            <p>No poll selected</p>
+            <button
+              onClick={handleBackToOverview}
+              className="mt-4 text-white hover:text-gray-300 underline"
+            >
+              Back to Dashboard
+            </button>
+          </div>
         );
       default:
         return (
           <div className="space-y-8">
-            {/* Dashboard Header */}
             <div className="text-center">
               <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
                 Welcome back, {user?.firstName || 'User'}!
@@ -137,10 +231,47 @@ export default function Dashboard() {
               </button>
             </div>
 
-            <PollsList
-              polls={polls}
-              onPreviewPoll={handlePreviewPoll}
-            />
+            {polls.length > 0 ? (
+              <PollsList
+                polls={polls}
+                onPreviewPoll={handlePreviewPoll}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <div className="bg-gray-900 border border-gray-800 rounded-2xl p-12">
+                  <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <BarChart3 className="w-8 h-8 text-gray-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-4">No polls yet</h3>
+                  <p className="text-gray-400 mb-8 max-w-md mx-auto">
+                    Create your first poll to start gathering feedback and insights from your audience.
+                  </p>
+                  <button
+                    onClick={() => setCurrentView('create')}
+                    className="bg-white text-black px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+                  >
+                    Create Your First Poll
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="text-center">
+              <button
+                onClick={fetchPolls}
+                disabled={loading}
+                className="text-gray-400 hover:text-white transition-colors disabled:opacity-50 flex items-center gap-2 mx-auto"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Refreshing...
+                  </>
+                ) : (
+                  'Refresh Polls'
+                )}
+              </button>
+            </div>
           </div>
         );
     }

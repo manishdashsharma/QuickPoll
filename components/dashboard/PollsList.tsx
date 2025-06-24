@@ -4,8 +4,6 @@ import React from 'react';
 import { Eye, BarChart3, Users, Calendar, ExternalLink, MoreVertical } from 'lucide-react';
 import { Poll, PollsListProps } from '@/types';
 
-
-
 export default function PollsList({ polls, onPreviewPoll }: PollsListProps) {
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -20,6 +18,19 @@ export default function PollsList({ polls, onPreviewPoll }: PollsListProps) {
     return poll.options.reduce((prev, current) => 
       prev.votes > current.votes ? prev : current
     );
+  };
+
+  const handleSharePoll = (poll: Poll) => {
+    if (poll.url) {
+      window.open(poll.url, '_blank');
+    } else if (poll.slug) {
+      const baseUrl = process.env.NEXT_PUBLIC_URL || window.location.origin;
+      const pollUrl = `${baseUrl}/poll/${poll.slug}`;
+      window.open(pollUrl, '_blank');
+    } else {
+      console.error('No URL available for poll:', poll.id);
+      alert('Poll URL not available');
+    }
   };
 
   if (polls.length === 0) {
@@ -120,11 +131,11 @@ export default function PollsList({ polls, onPreviewPoll }: PollsListProps) {
                     <Eye className="w-4 h-4" />
                     Preview
                   </button>
-                  <button className="border border-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:border-gray-500 hover:bg-gray-800 transition-colors flex items-center gap-2 justify-center">
-                    <BarChart3 className="w-4 h-4" />
-                    Analytics
-                  </button>
-                  <button className="border border-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:border-gray-500 hover:bg-gray-800 transition-colors flex items-center gap-2 justify-center">
+                  
+                  <button
+                    onClick={() => handleSharePoll(poll)}
+                    className="border border-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:border-gray-500 hover:bg-gray-800 transition-colors flex items-center gap-2 justify-center"
+                  >
                     <ExternalLink className="w-4 h-4" />
                     Share
                   </button>
